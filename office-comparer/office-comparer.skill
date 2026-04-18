@@ -14,7 +14,7 @@
     "opencv-python",
     "jinja2"
   ],
-  "main": "app.py",
+  "main": "scripts/app.py",
   "assets": [
     "SKILL.md",
     "requirements.txt"
