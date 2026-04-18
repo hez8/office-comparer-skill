@@ -1,0 +1,9 @@
+streamlit
+python-docx
+pandas
+openpyxl
+pillow
+numpy
+plotly
+opencv-python
+jinja2

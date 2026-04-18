@@ -1,0 +1,22 @@
+{
+  "name": "office-comparer",
+  "version": "2.0.0",
+  "description": "基于 Streamlit 的高性能 Office 比对 Pro 工具（支持 Word/Excel/图像自动对齐）",
+  "author": "Gemini CLI",
+  "dependencies": [
+    "streamlit",
+    "python-docx",
+    "pandas",
+    "openpyxl",
+    "pillow",
+    "numpy",
+    "plotly",
+    "opencv-python",
+    "jinja2"
+  ],
+  "main": "app.py",
+  "assets": [
+    "office-comparer/SKILL.md",
+    "requirements.txt"
+  ]
+}
