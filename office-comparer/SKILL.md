@@ -1,25 +1,27 @@
 ---
 name: office-comparer
-description: 提供了基于 Streamlit 的文件（Word/Excel）与图片（PNG/JPG）的高性能并排比较与交互式编辑功能。支持字符级差异高亮、表格对齐比对以及基于 CV2 的图像自动配准。
+description: 提供了基于 Streamlit 的文件（Word/Excel/Code）与图片（PNG/JPG）的高性能并排比较与交互式编辑功能。支持万能文档对比、Minimap 导航、黑暗模式以及基于 CV2 的图像自动配准。
 ---
 
 # office-comparer 技能使用指南
 
-此技能允许 Gemini CLI 部署并运行一个专业的办公级比对工具 **Office-Comparer Pro**。
+此技能允许 Gemini CLI 部署并运行一个专业的全能比对工具 **Office-Comparer Pro**。
 
 ## 核心功能
 
-1.  **Word 文档比对 (Pro)**：
-    *   **字符级高亮**：精确识别段落内部的增删改，使用删除线与颜色标记。
-    *   **实时同步**：支持单行或全量接受 A/B 版本，修改后可直接导出 `.docx`。
-2.  **Excel 表格比对 (New)**：
-    *   **Side-by-Side 视图**：基于 Pandas 对齐两个表格。
-    *   **单元格差异标记**：自动以黄色背景高亮所有内容不一致的单元格。
-3.  **高级图像配准 (Enhanced)**：
+1.  **万能文档对比 (Universal Doc Diff)**：
+    *   **多格式支持**：兼容 `.docx`, `.py`, `.c`, `.cpp`, `.txt`, `.md` 等多种办公与代码格式。
+    *   **代码优化**：内置 `Fira Code` 等宽字体，完整保留缩进，适配代码审查。
+    *   **查看模式**：支持“左右双栏”与“混合视图（Unified View）”一键切换。
+2.  **专业 UI/UX 特性**：
+    *   **Minimap 导航**：侧边栏实时渲染全文差异缩略图，快速定位修改点。
+    *   **黑暗模式 (Dark Mode)**：一键切换深色主题，保护视力。
+    *   **毛玻璃特效**：现代化的 Glassmorphism 界面设计。
+3.  **Excel 表格对比**：
+    *   **单元格高亮**：自动识别并标记表格中的数值差异。
+4.  **高级图像配准 (CV2 Powered)**：
     *   **自动对齐**：使用 OpenCV ORB 算法自动纠正图片间的位移与旋转。
-    *   **像素级热图**：支持透明叠加与灵敏度调节，适配高清图片。
-4.  **性能优化**：
-    *   **智能缓存**：采用 `@st.cache_data`，大文件处理零卡顿。
+    *   **动态覆盖**：支持手动调节差异灵敏度与覆盖强度（Alpha）。
 
 ## 启动指令
 
@@ -31,7 +33,7 @@ python -m streamlit run app.py --server.port 8501 --server.headless true
 ## 资源清单
 
 - `app.py`: 核心 Streamlit UI 与业务逻辑程序。
-- `requirements.txt`: 包含 `opencv-python`, `python-docx`, `pandas` 等必需依赖。
+- `requirements.txt`: 包含 `opencv-python`, `python-docx`, `pandas`, `plotly` 等必需依赖。
 
 ## 环境要求
 
