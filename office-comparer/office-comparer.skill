@@ -16,7 +16,7 @@
   ],
   "main": "app.py",
   "assets": [
-    "office-comparer/SKILL.md",
+    "SKILL.md",
     "requirements.txt"
   ]
 }
