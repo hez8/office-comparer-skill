@@ -21,19 +21,19 @@ except ImportError:
     comtypes = None
 
 # --- 1. 动态主题与高级样式 ---
-def apply_custom_style(dark_mode=False):
+def apply_custom_style(eye_care_mode=False):
     theme = {
-        "bg": "#1e1e1e" if dark_mode else "#f3f2f1",
-        "card": "#2d2d2d" if dark_mode else "rgba(255, 255, 255, 0.9)",
-        "text": "#e1e1e1" if dark_mode else "#323130",
-        "border": "#404040" if dark_mode else "#edebe9",
-        "header_bg": "rgba(45, 45, 45, 0.8)" if dark_mode else "rgba(255, 255, 255, 0.7)",
-        "diff_add": "#1e3a1e" if dark_mode else "#e6ffed",
+        "bg": "#F4ECD8" if eye_care_mode else "#f3f2f1",
+        "card": "#E1F5E1" if eye_care_mode else "rgba(255, 255, 255, 0.9)",
+        "text": "#2B1D11" if eye_care_mode else "#323130",
+        "border": "#DCCBA0" if eye_care_mode else "#edebe9",
+        "header_bg": "rgba(244, 236, 216, 0.9)" if eye_care_mode else "rgba(255, 255, 255, 0.7)",
+        "diff_add": "#B4E6B4" if eye_care_mode else "#e6ffed", # 保持现有差异高亮色，除非特别要求
         "diff_add_border": "#22c55e",
-        "diff_del": "#3e2723" if dark_mode else "#ffeef0",
+        "diff_del": "#F5C6C6" if eye_care_mode else "#ffeef0", # 保持现有差异高亮色
         "diff_del_border": "#f14c4c",
-        "char_add": "#2ea44f" if dark_mode else "#acf2bd",
-        "char_del": "#f14c4c" if dark_mode else "#fdb8c0",
+        "char_add": "#5A9E5A" if eye_care_mode else "#acf2bd", # 保持现有字符高亮色
+        "char_del": "#D84A4A" if eye_care_mode else "#fdb8c0", # 保持现有字符高亮色
     }
     
     style_html = f"""
@@ -84,6 +84,10 @@ def apply_custom_style(dark_mode=False):
             background: rgba(128,128,128,0.1); border-radius: 6px; z-index: 99;
         }}
         .minimap-bit {{ width: 100%; height: 2px; margin-bottom: 1px; }}
+        section[data-testid="stSidebar"] {{ 
+            background-color: {theme["bg"]} !important; 
+            border-right: 1px solid {theme["border"]};
+        }}
     </style>
     """
     st.markdown(style_html, unsafe_allow_html=True)
@@ -98,6 +102,51 @@ HEADER_HTML = """
 """
 
 # --- 2. 逻辑引擎 ---
+
+def save_step():
+    """保存当前状态到历史堆栈（深拷贝）"""
+    if "history" not in st.session_state:
+        st.session_state.history = []
+    
+    # 限制历史记录为最近 50 步
+    st.session_state.history.append({
+        "lines_a": list(st.session_state.get("lines_a", [])),
+        "lines_b": list(st.session_state.get("lines_b", []))
+    })
+    if len(st.session_state.history) > 50:
+        st.session_state.history.pop(0)
+
+def undo():
+    """执行撤销操作"""
+    if "history" in st.session_state and st.session_state.history:
+        prev_state = st.session_state.history.pop()
+        st.session_state.lines_a = prev_state["lines_a"]
+        st.session_state.lines_b = prev_state["lines_b"]
+        st.toast("↩️ 已撤销上一步操作")
+        st.rerun()
+    else:
+        st.toast("⚠️ 没有可撤销的历史记录")
+
+def apply_replacement(side, i1, i2, j1, j2):
+    """执行文字替换逻辑"""
+    save_step()
+    if side == "right":
+        # A 替换 B
+        st.session_state.lines_b[j1:j2] = st.session_state.lines_a[i1:i2]
+    else:
+        # B 替换 A
+        st.session_state.lines_a[i1:i2] = st.session_state.lines_b[j1:j2]
+    st.toast(f"✅ 已同步差异到{'右' if side == 'right' else '左'}侧")
+    st.rerun()
+
+def save_docx_from_lines(lines):
+    """从行列表生成 docx 字节流"""
+    doc = Document()
+    for line in lines:
+        doc.add_paragraph(line)
+    bio = io.BytesIO()
+    doc.save(bio)
+    return bio.getvalue()
 
 def normalize_text_flow(lines, ignore_breaks=False):
     """语义标准化逻辑"""
@@ -191,10 +240,32 @@ if 'dark_mode' not in st.session_state: st.session_state.dark_mode = True
 
 with st.sidebar:
     st.markdown("### 🎨 界面定制")
-    st.session_state.dark_mode = st.toggle("🌙 黑暗模式", value=st.session_state.dark_mode, key="toggle_dark")
+    st.session_state.eye_care_mode = st.toggle("🌙 护眼模式", value=st.session_state.eye_care_mode if 'eye_care_mode' in st.session_state else True, key="toggle_eye")
+    # 同步状态变量名称
+    st.session_state.dark_mode = st.session_state.eye_care_mode
     view_mode = st.radio("👀 查看模式", ["左右双栏", "混合视图"], key="view_mode")
     st.markdown("---")
     tab_type = st.radio("📁 比对类型", ["文档对比", "图像比对"], key="tab_type")
+    st.markdown("---")
+    
+    if tab_type == "文档对比":
+        st.markdown("### 🛠️ 文档操作")
+        if st.button("↩️ 撤销修改", use_container_width=True):
+            undo()
+        
+        if "lines_a" in st.session_state and "lines_b" in st.session_state:
+            st.download_button("💾 导出修改后的 A", save_docx_from_lines(st.session_state.lines_a), "A_modified.docx", use_container_width=True)
+            st.download_button("💾 导出修改后的 B", save_docx_from_lines(st.session_state.lines_b), "B_modified.docx", use_container_width=True)
+            
+            if st.button("⏩ A 全部同步到 B", use_container_width=True):
+                save_step()
+                st.session_state.lines_b = list(st.session_state.lines_a)
+                st.rerun()
+            if st.button("⏪ B 全部同步到 A", use_container_width=True):
+                save_step()
+                st.session_state.lines_a = list(st.session_state.lines_b)
+                st.rerun()
+
     st.markdown("---")
     st.markdown("### ⚙️ 算法参数")
     threshold = st.slider("差异灵敏度", 0, 255, 10, key="slider_thresh")
@@ -237,8 +308,16 @@ if tab_type == "文档对比":
     final_b = fb if fb else fb_mock
     
     if final_a and final_b:
-        lines_a = load_document_lines(final_a, ignore_breaks)
-        lines_b = load_document_lines(final_b, ignore_breaks)
+        # 初始化状态
+        file_key = f"{final_a.name}_{final_b.name}_{ignore_breaks}"
+        if "file_key" not in st.session_state or st.session_state.file_key != file_key:
+            st.session_state.lines_a = load_document_lines(final_a, ignore_breaks)
+            st.session_state.lines_b = load_document_lines(final_b, ignore_breaks)
+            st.session_state.file_key = file_key
+            st.session_state.history = []
+
+        lines_a = st.session_state.lines_a
+        lines_b = st.session_state.lines_b
         
         matcher = difflib.SequenceMatcher(None, lines_a, lines_b)
         opcodes = matcher.get_opcodes()
@@ -250,40 +329,61 @@ if tab_type == "文档对比":
             st.markdown(f'<div class="minimap-bit" style="background:{color}"></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Beyond Compare 级并排渲染
+        # 交互式渲染布局
         for tag, i1, i2, j1, j2 in opcodes:
             if tag == 'equal':
                 if show_equal:
                     for k in range(i2-i1):
-                        r1, r2 = st.columns(2)
-                        r1.markdown(f'<div class="doc-content">{lines_a[i1+k]}</div>', unsafe_allow_html=True)
-                        r2.markdown(f'<div class="doc-content">{lines_b[j1+k]}</div>', unsafe_allow_html=True)
+                        r = st.columns([1, 10, 2, 10, 1])
+                        r[1].markdown(f'<div class="doc-content">{lines_a[i1+k]}</div>', unsafe_allow_html=True)
+                        r[2].markdown("<center style='color:#666; font-size:1.2rem; line-height:2.4'>=</center>", unsafe_allow_html=True)
+                        r[3].markdown(f'<div class="doc-content">{lines_b[j1+k]}</div>', unsafe_allow_html=True)
             elif tag == 'replace':
                 max_lines = max(i2-i1, j2-j1)
                 for k in range(max_lines):
-                    la = lines_a[i1+k] if (i1+k) < i2 else ""
-                    lb = lines_b[j1+k] if (j1+k) < j2 else ""
-                    r1, r2 = st.columns(2)
+                    idx_a, idx_b = i1+k, j1+k
+                    la = lines_a[idx_a] if idx_a < i2 else ""
+                    lb = lines_b[idx_b] if idx_b < j2 else ""
+                    
+                    r = st.columns([1, 10, 2, 10, 1])
                     if la and lb:
                         ha, hb = get_char_diff_html(la, lb)
-                        r1.markdown(f'<div class="doc-content diff-removed">{ha}</div>', unsafe_allow_html=True)
-                        r2.markdown(f'<div class="doc-content diff-added">{hb}</div>', unsafe_allow_html=True)
+                        r[1].markdown(f'<div class="doc-content diff-removed">{ha}</div>', unsafe_allow_html=True)
+                        with r[2]:
+                            btn_c1, btn_c2 = st.columns(2)
+                            if btn_c1.button("→", key=f"repl_r_{idx_a}_{idx_b}"):
+                                apply_replacement("right", idx_a, idx_a+1, idx_b, idx_b+1)
+                            if btn_c2.button("←", key=f"repl_l_{idx_a}_{idx_b}"):
+                                apply_replacement("left", idx_a, idx_a+1, idx_b, idx_b+1)
+                        r[3].markdown(f'<div class="doc-content diff-added">{hb}</div>', unsafe_allow_html=True)
                     elif la:
-                        r1.markdown(f'<div class="doc-content diff-removed">{la}</div>', unsafe_allow_html=True)
-                        r2.markdown('<div class="doc-content empty-line"></div>', unsafe_allow_html=True)
+                        r[1].markdown(f'<div class="doc-content diff-removed">{la}</div>', unsafe_allow_html=True)
+                        with r[2]:
+                            if st.button("→", key=f"del_r_{idx_a}_{idx_b}"):
+                                apply_replacement("right", idx_a, idx_a+1, idx_b, idx_b)
+                        r[3].markdown('<div class="doc-content empty-line"></div>', unsafe_allow_html=True)
                     else:
-                        r1.markdown('<div class="doc-content empty-line"></div>', unsafe_allow_html=True)
-                        r2.markdown(f'<div class="doc-content diff-added">{lb}</div>', unsafe_allow_html=True)
+                        r[1].markdown('<div class="doc-content empty-line"></div>', unsafe_allow_html=True)
+                        with r[2]:
+                            if st.button("←", key=f"ins_l_{idx_a}_{idx_b}"):
+                                apply_replacement("left", idx_a, idx_a, idx_b, idx_b+1)
+                        r[3].markdown(f'<div class="doc-content diff-added">{lb}</div>', unsafe_allow_html=True)
             elif tag == 'delete':
                 for k in range(i1, i2):
-                    r1, r2 = st.columns(2)
-                    r1.markdown(f'<div class="doc-content diff-removed">{lines_a[k]}</div>', unsafe_allow_html=True)
-                    r2.markdown('<div class="doc-content empty-line"></div>', unsafe_allow_html=True)
+                    r = st.columns([1, 10, 2, 10, 1])
+                    r[1].markdown(f'<div class="doc-content diff-removed">{lines_a[k]}</div>', unsafe_allow_html=True)
+                    with r[2]:
+                        if st.button("→", key=f"block_del_r_{k}"):
+                            apply_replacement("right", k, k+1, j1, j1)
+                    r[3].markdown('<div class="doc-content empty-line"></div>', unsafe_allow_html=True)
             elif tag == 'insert':
                 for k in range(j1, j2):
-                    r1, r2 = st.columns(2)
-                    r1.markdown('<div class="doc-content empty-line"></div>', unsafe_allow_html=True)
-                    r2.markdown(f'<div class="doc-content diff-added">{lines_b[k]}</div>', unsafe_allow_html=True)
+                    r = st.columns([1, 10, 2, 10, 1])
+                    r[1].markdown('<div class="doc-content empty-line"></div>', unsafe_allow_html=True)
+                    with r[2]:
+                        if st.button("←", key=f"block_ins_l_{k}"):
+                            apply_replacement("left", i1, i1, k, k+1)
+                    r[3].markdown(f'<div class="doc-content diff-added">{lines_b[k]}</div>', unsafe_allow_html=True)
 
 elif tab_type == "图像比对":
     iu1, iu2 = st.columns(2)
