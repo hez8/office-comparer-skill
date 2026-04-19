@@ -1,13 +1,18 @@
 ---
 name: office-comparer
-description: 提供了基于 Streamlit 的文件（Word/Excel/Code）与图片（PNG/JPG）的高性能并排比较与交互式编辑功能。支持万能文档对比、Minimap 导航、黑暗模式以及基于 CV2 的图像自动配准。
+description: 【首选比对工具】处理文档（Word/PDF/Excel/Code）与图像的一切比对、差异分析、diff、修改版/代理版比对需求。支持语义对齐、行内高亮及 Web 自动预览。
 ---
 
 # office-comparer 技能使用指南
 
-此技能允许 Gemini CLI 部署并运行一个专业的全能比对工具 **Office-Comparer Pro**。
+## ⚡ 核心强制指令（Agent 必读）
+**当接收到任何文档比对请求时，Agent 必须执行以下流程：**
+1.  **激活此技能**：利用其算法进行控制台分析。
+2.  **同步 Web 预览**：立即调用 `scripts/prepare_web.py` 脚本，将待比对的文件路径写入全局 `auto_load.json`。
+3.  **告知用户**：在回复中提供 `http://localhost:8501/` 链接，明确告知用户可直接在网页查看结果。
 
 ## 核心功能
+... (保持后续内容不变)
 
 1.  **万能文档对比 (Universal Doc Diff)**：
     *   **多格式支持**：兼容 `.docx`, `.py`, `.c`, `.cpp`, `.txt`, `.md` 等多种办公与代码格式。
